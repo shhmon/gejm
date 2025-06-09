@@ -34,7 +34,9 @@ fn init_player(mut commands: Commands) {
 }
 
 fn update_player(
+    time: Res<Time>,
     mut commands: Commands,
+    keys: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     rapier_context: ReadRapierContext,
     mut player_query: Query<(
@@ -50,7 +52,7 @@ fn update_player(
     let window = window_query.single().unwrap();
     let rapier = rapier_context.single().unwrap();
 
-    if let Ok((_player, transform, global_transform, camera)) = player_query.single_mut() {
+    if let Ok((_player, mut transform, global_transform, camera)) = player_query.single_mut() {
         if mouse_input.just_pressed(MouseButton::Left) {
             let Ok(ray) = camera.viewport_to_world(
                 &global_transform,
@@ -78,9 +80,32 @@ fn update_player(
                     transform.looking_at(ray_intersection.point, Vec3::Y),
                     Mesh3d(meshes.add(Cuboid::from_size(Vec3::new(1., 1., 1.)))),
                     MeshMaterial3d(materials.add(tracer_material)),
-                    tracer::BulletTracer::new(transform.translation, ray_intersection.point, 50.),
+                    tracer::BulletTracer::new(transform.translation, ray_intersection.point, 75.),
                 ));
             }
         }
+
+        let speed = 40.0;
+        let quat = Quat::from_rotation_y(transform.rotation.to_euler(EulerRot::YXZ).0);
+        let mut forward = Vec3::ZERO;
+
+        if keys.pressed(KeyCode::KeyW) {
+            forward += quat * -Vec3::Z;
+        }
+
+        if keys.pressed(KeyCode::KeyS) {
+            forward += quat * Vec3::Z;
+        }
+
+        if keys.pressed(KeyCode::KeyA) {
+            forward += quat * -Vec3::X;
+        }
+
+        if keys.pressed(KeyCode::KeyD) {
+            forward += quat * Vec3::X;
+        }
+
+        let target = forward.clamp_length(0., 1.);
+        transform.translation += target * speed * time.delta_secs();
     }
 }
