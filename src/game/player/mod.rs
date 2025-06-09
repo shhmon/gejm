@@ -1,2 +1,2 @@
-pub mod camera_controller;
+pub mod camera;
 pub mod player;
